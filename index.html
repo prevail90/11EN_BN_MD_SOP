@@ -171,6 +171,43 @@
         li.style.display = text.includes(term) ? '' : 'none';
       });
     });
+  
+  const contentFrame = document.getElementById('contentFrame');
+
+  // This function will attach a scroll listener inside the iframe after it loads
+  function attachScrollListener() {
+    const iframeDoc = contentFrame.contentDocument || contentFrame.contentWindow.document;
+
+    iframeDoc.addEventListener('scroll', () => {
+      const scrollTop = iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
+      const scrollHeight = iframeDoc.documentElement.scrollHeight || iframeDoc.body.scrollHeight;
+      const clientHeight = iframeDoc.documentElement.clientHeight || iframeDoc.body.clientHeight;
+
+      // When we're within ~50px of the bottom, go to next page
+      if (scrollTop + clientHeight >= scrollHeight - 50) {
+        loadNextPage();
+      }
+    });
+  }
+
+  contentFrame.addEventListener('load', attachScrollListener);
+
+  function loadNextPage() {
+    const currentUrl = contentFrame.getAttribute('src');
+    const match = currentUrl.match(/SOP-(\d+)\.html$/);
+    if (match) {
+      const currentPage = parseInt(match[1], 10);
+      const nextPage = currentPage + 1;
+      const nextUrl = currentUrl.replace(`SOP-${currentPage}.html`, `SOP-${nextPage}.html`);
+
+      // Check if next page actually exists by trying to fetch it
+      fetch(nextUrl).then(res => {
+        if (res.ok) {
+          contentFrame.src = nextUrl;
+        }
+      });
+    }
+  }
   </script>
 </body>
 </html>
