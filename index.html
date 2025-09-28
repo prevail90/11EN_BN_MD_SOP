@@ -116,6 +116,17 @@
       border: none;
       height: 100vh;
     }
+    #contentContainer {
+  flex: 1;
+  overflow-y: auto;
+  height: 100vh;
+  background: #fff;
+}
+.page-section {
+  border-bottom: 1px solid #ccc;
+  margin: 0 auto;
+}
+
   </style>
 </head>
 <body>
@@ -139,7 +150,7 @@
     </div>
   </nav>
 
-  <iframe id="contentFrame" src="BN Driver's Training SOP-1.html" name="contentFrame"></iframe>
+  <div id="contentContainer"></div>
 
   <script>
     // Load the outline HTML and inject its structure
@@ -300,12 +311,63 @@
     } else {
       matches.forEach(m => {
         const li = document.createElement('li');
-        li.innerHTML = `<a href="${pagePrefix}${m.page}${pageSuffix}" target="contentFrame">
-          Page ${m.page}: ${m.snippet}...</a>`;
+      li.innerHTML = `<a href="#page-${m.page}">Page ${m.page}: ${m.snippet}...</a>`;
         resultsList.appendChild(li);
       });
     }
   });
 </script>
+<script>
+  const contentContainer = document.getElementById('contentContainer');
+  const totalPages = 88; // set this to the actual number of pages
+  const pagePrefix = "BN Driver's Training SOP-";
+  const pageSuffix = ".html";
+
+  async function loadPages() {
+    for (let i = 1; i <= totalPages; i++) {
+      const url = `${pagePrefix}${i}${pageSuffix}`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const html = await res.text();
+
+        // Parse page HTML and extract just the <body> content
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const pageContent = doc.body.innerHTML;
+
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'page-section';
+        pageDiv.id = `page-${i}`;
+        pageDiv.innerHTML = pageContent;
+
+        contentContainer.appendChild(pageDiv);
+      } catch (e) {
+        console.warn('Failed to load page', i, e);
+      }
+    }
+    console.log('All pages appended');
+  }
+
+  loadPages();
+  
+  // Convert all bookmark links to scroll links
+document.addEventListener('click', function(e) {
+  const a = e.target.closest('a');
+  if (a && a.getAttribute('href')?.match(/SOP-(\d+)\.html/)) {
+    e.preventDefault();
+    const match = a.getAttribute('href').match(/SOP-(\d+)\.html/);
+    if (match) {
+      const targetId = `page-${match[1]}`;
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }
+});
+
+</script>
+
 </body>
 </html>
