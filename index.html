@@ -153,139 +153,84 @@
   <div id="contentContainer"></div>
 
   <script>
-    // Load the outline HTML and inject its structure
-    fetch('BN Driver\'s Training SOP-outline.html')
-      .then(res => res.text())
-      .then(html => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const outline = doc.querySelector('ul');
+  // --- GLOBAL CONFIG ---
+  const totalPages = 88;
+  const pagePrefix = "BN Driver's Training SOP-";
+  const pageSuffix = ".html";
 
-        const tocContainer = document.getElementById('bookmarks');
-        tocContainer.appendChild(transformOutline(outline));
-
-        // Add collapsible functionality
-        tocContainer.querySelectorAll('li > a').forEach(link => {
-          // leave as normal links, no changes needed
-        });
-
-        tocContainer.querySelectorAll('li').forEach(li => {
-          const sublist = li.querySelector('ul');
-          if (sublist) {
-            const heading = document.createElement('h2');
-            const link = li.querySelector('a');
-            heading.textContent = link.textContent;
-            heading.addEventListener('click', () => {
-              sublist.classList.toggle('show');
-            });
-            li.insertBefore(heading, link);
-            link.remove(); // remove top link, we use heading instead
-            sublist.classList.add('collapsible');
-          }
-        });
-      });
-
-    function transformOutline(outlineUL) {
-      // Clone and adjust links to target the content frame
-      const clone = outlineUL.cloneNode(true);
-      clone.querySelectorAll('a').forEach(a => {
-        a.setAttribute('target', 'contentFrame');
-      });
-      return clone;
-    }
-
-    // Simple bookmark search
-    const searchBox = document.getElementById('searchBox');
-    searchBox.addEventListener('input', () => {
-      const term = searchBox.value.toLowerCase();
-      const links = document.querySelectorAll('#bookmarks a');
-      links.forEach(link => {
-        const text = link.textContent.toLowerCase();
-        const li = link.closest('li');
-        li.style.display = text.includes(term) ? '' : 'none';
-      });
+  // --- BUILD THE TOC ---
+  fetch('BN Driver\'s Training SOP-outline.html')
+    .then(res => res.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const outline = doc.querySelector('ul');
+      const tocContainer = document.getElementById('bookmarks');
+      tocContainer.appendChild(transformOutline(outline));
+      // collapse/expand headings...
     });
-  
-  const contentFrame = document.getElementById('contentFrame');
 
-  // This function will attach a scroll listener inside the iframe after it loads
-  function attachScrollListener() {
-    const iframeDoc = contentFrame.contentDocument || contentFrame.contentWindow.document;
-
-    iframeDoc.addEventListener('scroll', () => {
-      const scrollTop = iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
-      const scrollHeight = iframeDoc.documentElement.scrollHeight || iframeDoc.body.scrollHeight;
-      const clientHeight = iframeDoc.documentElement.clientHeight || iframeDoc.body.clientHeight;
-
-      // When we're within ~50px of the bottom, go to next page
-      if (scrollTop + clientHeight >= scrollHeight - 50) {
-        loadNextPage();
-      }
+  function transformOutline(outlineUL) {
+    const clone = outlineUL.cloneNode(true);
+    clone.querySelectorAll('a').forEach(a => {
+      a.removeAttribute('target'); // no iframe anymore
     });
+    return clone;
   }
 
-  contentFrame.addEventListener('load', attachScrollListener);
+  // --- LOAD PAGES INTO ONE SCROLLABLE CONTAINER ---
+  const contentContainer = document.getElementById('contentContainer');
 
-  function loadNextPage() {
-    const currentUrl = contentFrame.getAttribute('src');
-    const match = currentUrl.match(/SOP-(\d+)\.html$/);
-    if (match) {
-      const currentPage = parseInt(match[1], 10);
-      const nextPage = currentPage + 1;
-      const nextUrl = currentUrl.replace(`SOP-${currentPage}.html`, `SOP-${nextPage}.html`);
-
-      // Check if next page actually exists by trying to fetch it
-      fetch(nextUrl).then(res => {
-        if (res.ok) {
-          contentFrame.src = nextUrl;
-        }
-      });
+  async function loadPages() {
+    for (let i = 1; i <= totalPages; i++) {
+      const url = `${pagePrefix}${i}${pageSuffix}`;
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const html = await res.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const pageDiv = document.createElement('div');
+      pageDiv.className = 'page-section';
+      pageDiv.id = `page-${i}`;
+      pageDiv.innerHTML = doc.body.innerHTML;
+      contentContainer.appendChild(pageDiv);
     }
+    console.log('All pages appended');
   }
-  </script>
-  <script>
-  const searchBox = document.getElementById('searchBox');
+
+  loadPages();
+
+  // --- BUILD TEXT SEARCH INDEX ---
   const bookmarksContainer = document.getElementById('bookmarks');
   const resultsContainer = document.getElementById('searchResults');
   const resultsList = document.getElementById('resultsList');
+  const searchBox = document.getElementById('searchBox');
 
-  const totalPages = 88; // adjust to your actual page count
-  const pagePrefix = "BN Driver's Training SOP-";
-  const pageSuffix = ".html";
   let pageIndex = [];
 
-  // Load and index all pages at startup
   async function buildIndex() {
     for (let i = 1; i <= totalPages; i++) {
       const url = `${pagePrefix}${i}${pageSuffix}`;
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const html = await res.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        const text = doc.body.innerText.replace(/\s+/g, ' ').trim();
-        pageIndex.push({ page: i, text });
-      } catch (e) {
-        console.warn('Failed to index page', i, e);
-      }
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const text = doc.body.innerText.replace(/\s+/g, ' ').trim();
+      pageIndex.push({ page: i, text });
     }
     console.log('Search index ready:', pageIndex.length, 'pages indexed');
   }
 
   buildIndex();
 
-  // Search both bookmarks and full text
+  // --- SEARCH ---
   searchBox.addEventListener('input', () => {
     const term = searchBox.value.trim().toLowerCase();
-
     if (term === '') {
-      // Show bookmarks, hide search results
       bookmarksContainer.style.display = '';
       resultsContainer.style.display = 'none';
       return;
     }
-
-    // Hide bookmarks, show results
     bookmarksContainer.style.display = 'none';
     resultsContainer.style.display = 'block';
     resultsList.innerHTML = '';
@@ -294,14 +239,12 @@
     for (const { page, text } of pageIndex) {
       const idx = text.toLowerCase().indexOf(term);
       if (idx !== -1) {
-        // Grab surrounding snippet
         const start = Math.max(0, idx - 40);
         const end = Math.min(text.length, idx + term.length + 40);
         const snippet = text.substring(start, end).replace(/\n/g, ' ');
-
         matches.push({
           page,
-          snippet: snippet.replace(new RegExp(term, 'ig'), match => `<mark>${match}</mark>`)
+          snippet: snippet.replace(new RegExp(term, 'ig'), m => `<mark>${m}</mark>`)
         });
       }
     }
@@ -311,63 +254,24 @@
     } else {
       matches.forEach(m => {
         const li = document.createElement('li');
-      li.innerHTML = `<a href="#page-${m.page}">Page ${m.page}: ${m.snippet}...</a>`;
+        li.innerHTML = `<a href="#page-${m.page}">Page ${m.page}: ${m.snippet}...</a>`;
         resultsList.appendChild(li);
       });
     }
   });
-</script>
-<script>
-  const contentContainer = document.getElementById('contentContainer');
-  const totalPages = 88; // set this to the actual number of pages
-  const pagePrefix = "BN Driver's Training SOP-";
-  const pageSuffix = ".html";
 
-  async function loadPages() {
-    for (let i = 1; i <= totalPages; i++) {
-      const url = `${pagePrefix}${i}${pageSuffix}`;
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const html = await res.text();
-
-        // Parse page HTML and extract just the <body> content
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const pageContent = doc.body.innerHTML;
-
-        const pageDiv = document.createElement('div');
-        pageDiv.className = 'page-section';
-        pageDiv.id = `page-${i}`;
-        pageDiv.innerHTML = pageContent;
-
-        contentContainer.appendChild(pageDiv);
-      } catch (e) {
-        console.warn('Failed to load page', i, e);
+  // --- SCROLL LINK HANDLER ---
+  document.addEventListener('click', function(e) {
+    const a = e.target.closest('a');
+    if (a && a.getAttribute('href')?.match(/#page-(\d+)/)) {
+      const match = a.getAttribute('href').match(/#page-(\d+)/);
+      if (match) {
+        e.preventDefault();
+        document.getElementById(match[0].substring(1))
+          .scrollIntoView({ behavior: 'smooth' });
       }
     }
-    console.log('All pages appended');
-  }
-
-  loadPages();
-  
-  // Convert all bookmark links to scroll links
-document.addEventListener('click', function(e) {
-  const a = e.target.closest('a');
-  if (a && a.getAttribute('href')?.match(/SOP-(\d+)\.html/)) {
-    e.preventDefault();
-    const match = a.getAttribute('href').match(/SOP-(\d+)\.html/);
-    if (match) {
-      const targetId = `page-${match[1]}`;
-      const el = document.getElementById(targetId);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  }
-});
-
+  });
 </script>
-
 </body>
 </html>
