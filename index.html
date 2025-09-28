@@ -1,51 +1,149 @@
 <!DOCTYPE html>
-<html>
-<head>
-<title>BN Driver's Training SOP</title>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-<meta name="generator" content="pdftohtml 0.36"/>
-<meta name="date" content="2025-03-03T17:15:07+00:00"/>
-</head>
-<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>BN Driver's Training SOP</title>
+  <title>11th Engineer BN DOST SOP</title>
   <style>
     body {
       margin: 0;
       display: flex;
       height: 100vh;
-      font-family: sans-serif;
+      font-family: system-ui, sans-serif;
     }
+
     nav {
-      width: 200px;
-      background: #f1f1f1;
+      width: 300px;
+      background: #f8f8f8;
       border-right: 1px solid #ccc;
-      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
     }
+
+    #searchContainer {
+      padding: 8px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    #searchBox {
+      width: 100%;
+      padding: 6px;
+      box-sizing: border-box;
+      font-size: 0.95rem;
+    }
+
+    #bookmarks {
+      overflow-y: auto;
+      flex: 1;
+      padding: 10px;
+    }
+
+    #bookmarks ul {
+      list-style: none;
+      padding-left: 15px;
+      margin: 0;
+    }
+
+    #bookmarks li {
+      margin: 3px 0;
+    }
+
+    #bookmarks a {
+      text-decoration: none;
+      color: #333;
+      font-size: 0.9rem;
+    }
+
+    #bookmarks a:hover {
+      color: #0066cc;
+    }
+
+    #bookmarks h2 {
+      font-size: 1rem;
+      margin: 10px 0 5px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #bookmarks ul.collapsible {
+      display: none;
+    }
+
+    #bookmarks ul.collapsible.show {
+      display: block;
+    }
+
     iframe {
       flex: 1;
       border: none;
       height: 100vh;
     }
-    nav a {
-      display: block;
-      padding: 8px 12px;
-      text-decoration: none;
-      color: #333;
-    }
-    nav a:hover {
-      background: #ddd;
-    }
   </style>
 </head>
 <body>
   <nav>
-    <iframe src="BN Driver's Training SOP_ind.html" style="width:100%;height:100%;border:none;"></iframe>
+    <div id="searchContainer">
+      <input type="text" id="searchBox" placeholder="Search bookmarks..." />
+    </div>
+    <div id="bookmarks">
+      <!-- Table of contents will be generated here -->
+    </div>
   </nav>
-  <iframe id="contentFrame" src="BN Driver's Training SOP-1.html" name="contentFrame"></iframe>
-</body>
-</html>
 
+  <iframe id="contentFrame" src="BN Driver's Training SOP-1.html" name="contentFrame"></iframe>
+
+  <script>
+    // Load the outline HTML and inject its structure
+    fetch('BN Driver\'s Training SOP-outline.html')
+      .then(res => res.text())
+      .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const outline = doc.querySelector('ul');
+
+        const tocContainer = document.getElementById('bookmarks');
+        tocContainer.appendChild(transformOutline(outline));
+
+        // Add collapsible functionality
+        tocContainer.querySelectorAll('li > a').forEach(link => {
+          // leave as normal links, no changes needed
+        });
+
+        tocContainer.querySelectorAll('li').forEach(li => {
+          const sublist = li.querySelector('ul');
+          if (sublist) {
+            const heading = document.createElement('h2');
+            const link = li.querySelector('a');
+            heading.textContent = link.textContent;
+            heading.addEventListener('click', () => {
+              sublist.classList.toggle('show');
+            });
+            li.insertBefore(heading, link);
+            link.remove(); // remove top link, we use heading instead
+            sublist.classList.add('collapsible');
+          }
+        });
+      });
+
+    function transformOutline(outlineUL) {
+      // Clone and adjust links to target the content frame
+      const clone = outlineUL.cloneNode(true);
+      clone.querySelectorAll('a').forEach(a => {
+        a.setAttribute('target', 'contentFrame');
+      });
+      return clone;
+    }
+
+    // Simple bookmark search
+    const searchBox = document.getElementById('searchBox');
+    searchBox.addEventListener('input', () => {
+      const term = searchBox.value.toLowerCase();
+      const links = document.querySelectorAll('#bookmarks a');
+      links.forEach(link => {
+        const text = link.textContent.toLowerCase();
+        const li = link.closest('li');
+        li.style.display = text.includes(term) ? '' : 'none';
+      });
+    });
+  </script>
+</body>
 </html>
