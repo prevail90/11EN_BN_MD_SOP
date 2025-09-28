@@ -18,6 +18,26 @@
       display: flex;
       flex-direction: column;
     }
+    #downloadContainer {
+      padding: 8px;
+      border-bottom: 1px solid #ccc;
+      background: #eee;
+      text-align: center;
+    }
+
+    #downloadButton {
+      display: inline-block;
+      padding: 6px 10px;
+      background: #0066cc;
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.9rem;
+      border-radius: 4px;
+    }
+
+    #downloadButton:hover {
+      background: #004c99;
+    }
 
     #searchContainer {
       padding: 8px;
@@ -81,6 +101,13 @@
 </head>
 <body>
   <nav>
+    <div id="downloadContainer">
+      <a id="downloadButton" 
+         href="https://github.com/prevail90/11EN_BN_MD_SOP/raw/main/BN%20Driver's%20Training%20SOP.pdf" 
+         download>
+        ⬇ Download Full PDF
+      </a>
+    </div>
     <div id="searchContainer">
       <input type="text" id="searchBox" placeholder="Search bookmarks..." />
     </div>
