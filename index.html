@@ -50,6 +50,25 @@
       box-sizing: border-box;
       font-size: 0.95rem;
     }
+    #bookmarks, #searchResults {
+      overflow-y: auto;
+      flex: 1;
+      padding: 10px;
+    }
+
+    #resultsList li {
+      margin: 6px 0;
+    }
+
+    #resultsList a {
+      text-decoration: none;
+      color: #333;
+      font-size: 0.9rem;
+    }
+
+    #resultsList a:hover {
+      color: #0066cc;
+    }
 
     #bookmarks {
       overflow-y: auto;
@@ -110,6 +129,10 @@
     </div>
     <div id="searchContainer">
       <input type="text" id="searchBox" placeholder="Search bookmarks..." />
+    </div>
+    <div id="searchResults" style="display:none; overflow-y:auto; flex:1; padding:10px;">
+      <p><strong>Search Results</strong></p>
+      <ul id="resultsList" style="list-style:none; padding-left:0;"></ul>
     </div>
     <div id="bookmarks">
       <!-- Table of contents will be generated here -->
@@ -209,5 +232,80 @@
     }
   }
   </script>
+  <script>
+  const searchBox = document.getElementById('searchBox');
+  const bookmarksContainer = document.getElementById('bookmarks');
+  const resultsContainer = document.getElementById('searchResults');
+  const resultsList = document.getElementById('resultsList');
+
+  const totalPages = 88; // adjust to your actual page count
+  const pagePrefix = "BN Driver's Training SOP-";
+  const pageSuffix = ".html";
+  let pageIndex = [];
+
+  // Load and index all pages at startup
+  async function buildIndex() {
+    for (let i = 1; i <= totalPages; i++) {
+      const url = `${pagePrefix}${i}${pageSuffix}`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const text = doc.body.innerText.replace(/\s+/g, ' ').trim();
+        pageIndex.push({ page: i, text });
+      } catch (e) {
+        console.warn('Failed to index page', i, e);
+      }
+    }
+    console.log('Search index ready:', pageIndex.length, 'pages indexed');
+  }
+
+  buildIndex();
+
+  // Search both bookmarks and full text
+  searchBox.addEventListener('input', () => {
+    const term = searchBox.value.trim().toLowerCase();
+
+    if (term === '') {
+      // Show bookmarks, hide search results
+      bookmarksContainer.style.display = '';
+      resultsContainer.style.display = 'none';
+      return;
+    }
+
+    // Hide bookmarks, show results
+    bookmarksContainer.style.display = 'none';
+    resultsContainer.style.display = 'block';
+    resultsList.innerHTML = '';
+
+    const matches = [];
+    for (const { page, text } of pageIndex) {
+      const idx = text.toLowerCase().indexOf(term);
+      if (idx !== -1) {
+        // Grab surrounding snippet
+        const start = Math.max(0, idx - 40);
+        const end = Math.min(text.length, idx + term.length + 40);
+        const snippet = text.substring(start, end).replace(/\n/g, ' ');
+
+        matches.push({
+          page,
+          snippet: snippet.replace(new RegExp(term, 'ig'), match => `<mark>${match}</mark>`)
+        });
+      }
+    }
+
+    if (matches.length === 0) {
+      resultsList.innerHTML = `<li>No matches found.</li>`;
+    } else {
+      matches.forEach(m => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="${pagePrefix}${m.page}${pageSuffix}" target="contentFrame">
+          Page ${m.page}: ${m.snippet}...</a>`;
+        resultsList.appendChild(li);
+      });
+    }
+  });
+</script>
 </body>
 </html>
